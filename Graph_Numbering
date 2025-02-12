@@ -1,0 +1,144 @@
+import RPi.GPIO as GPIO
+import time
+import tkinter as tk
+from tkinter import Label
+import threading
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from datetime import datetime
+
+# Define GPIO pins
+RPin = 15  # GPIO14 for the relay
+BPin = 17  # GPIO15 for the button
+
+# Set up GPIO
+GPIO.setmode(GPIO.BCM)  
+GPIO.setup(RPin, GPIO.OUT)  # Set relay as output
+GPIO.setup(BPin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Set pull-up resistor
+
+# Variables
+count = 0  # Total button presses
+counts_per_minute = {}  # Dictionary to store minute-wise counts
+counts_per_hour = {}  # Dictionary to store hourly counts
+button_previous = GPIO.HIGH  # To detect button press
+start_time = datetime.now()
+time_data = []
+count_data = []
+
+# GUI Window Setup
+root = tk.Tk()
+root.title("TB PRODUCTION MONITOR")
+
+# Start Time Label
+start_time_label = Label(root, text=f"Start Time: {start_time.strftime('%H:%M:%S')}", font=("Arial", 16))
+start_time_label.pack()
+
+# Elapsed Time Label
+elapsed_time_label = Label(root, text="Elapsed Time: 0s", font=("Arial", 16))
+elapsed_time_label.pack()
+
+# Relay State Label
+relay_label = Label(root, text="INDEX: STOP", font=("Arial", 16), fg="red")
+relay_label.pack()
+
+# Total Count Label
+count_label = Label(root, text="Total Count: 0", font=("Arial", 16))
+count_label.pack()
+
+# Matplotlib Figure Setup
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
+
+# Function to update graphs
+def update_graph(frame):
+    ax1.clear()
+    ax1.set_xlabel("Time (Hours)")
+    ax1.set_ylabel("Total Count")
+    ax1.set_title("Real-Time Production Count")
+    ax1.plot(time_data, count_data, marker='o', linestyle='-')
+    
+    # Update bar graph
+    ax2.clear()
+    ax2.set_xlabel("Hour")
+    ax2.set_ylabel("Production Count")
+    ax2.set_title("Production Count Per Hour")
+    
+    hours = list(counts_per_hour.keys())
+    values = list(counts_per_hour.values())
+    
+    # Define colors based on count ranges
+    bar_colors = []
+    for value in values:
+        if value < 70:
+            bar_colors.append('red')
+        elif 71 <= value <= 150:
+            bar_colors.append('blue')
+        elif 151 <= value <= 250:
+            bar_colors.append('green')
+        else:
+            bar_colors.append('gold')
+    
+    bars = ax2.bar(hours, values, color=bar_colors)
+    
+    # Add count values inside bars in white text
+    for bar, value in zip(bars, values):
+        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height()/2, str(value), ha='center', va='center', color='white', fontsize=12, fontweight='bold')
+
+# Start Matplotlib Animation
+ani = animation.FuncAnimation(fig, update_graph, interval=1000)
+plt.ion()
+plt.show()
+
+# Function to handle button press
+def read_button():
+    global count, button_previous, time_data, count_data
+    
+    while True:
+        button_state = GPIO.input(BPin)
+        
+        # Detect falling edge (button press)
+        if button_state == GPIO.LOW and button_previous == GPIO.HIGH:
+            count += 1  # Increment count
+            current_minute = datetime.now().strftime("%H:%M")  # Get current minute
+            current_hour = datetime.now().strftime("%H")  # Get current hour
+            
+            # Store count per minute
+            if current_minute not in counts_per_minute:
+                counts_per_minute[current_minute] = 0
+            counts_per_minute[current_minute] += 1
+            
+            # Store count per hour
+            if current_hour not in counts_per_hour:
+                counts_per_hour[current_hour] = 0
+            counts_per_hour[current_hour] += 1
+            
+            print(f"COUNTNUM: {count}")
+            relay_label.config(text="INDEX: RUN", fg="green")
+            count_label.config(text=f"Total Count: {count}")
+            GPIO.output(RPin, GPIO.HIGH)  # Turn ON relay
+            
+            # Append data for plotting
+            elapsed_seconds = int((datetime.now() - start_time).total_seconds())
+            elapsed_time_label.config(text=f"Elapsed Time: {elapsed_seconds}s")
+            elapsed_hours = elapsed_seconds / 3600  # Convert to hours
+            time_data.append(elapsed_hours)
+            count_data.append(count)
+            
+            time.sleep(0.2)  # Debounce delay
+
+        # Detect rising edge (button release)
+        elif button_state == GPIO.HIGH and button_previous == GPIO.LOW:
+            relay_label.config(text="INDEX: STOP", fg="red")
+            GPIO.output(RPin, GPIO.LOW)  # Turn OFF relay
+        
+        button_previous = button_state  # Update button state
+        time.sleep(0.1)  # Small delay
+
+# Run button press detection in a separate thread
+button_thread = threading.Thread(target=read_button, daemon=True)
+button_thread.start()
+
+# Run the GUI
+root.mainloop()
+
+# Cleanup GPIO on exit
+GPIO.cleanup()
