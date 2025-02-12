@@ -1,4 +1,4 @@
-""import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import time
 import tkinter as tk
 from tkinter import Label
