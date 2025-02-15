@@ -1,0 +1,17 @@
+mkdir -p ~/.config/autostart
+  nano ~/.config/autostart/my_script.desktop
+[Desktop Entry]
+Name=Production Data
+Comment=Run Production data Pyhton Script at startup
+Exec=/home/anode/KaynesTB/run_script.sh
+Icon=/home/anode/KaynesTB/icon.png
+Terminal=true
+Type=Application
+Categories=Utility
+
+#Save Exit (Ctrl+O) (Ctrl+X)
+
+#Make the shell Sript Executable
+chmod +x home/anode/KaynesTB/run_script.sh
+
+sudo reboot
