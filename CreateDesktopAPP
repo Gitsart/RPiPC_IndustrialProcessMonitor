@@ -1,0 +1,28 @@
+#open Terminal navigate to the python scrpt location
+cd /home/anode/KaynesTB/
+#create a shell script to execute the program script 
+nano run_script.sh   #and add
+#!/bin/bash
+   python3 /home/anode/KaynesTB/ProductionGraph3.py
+#save(Ctrl+O) exit (Ctrl+X)
+
+#make the shell script executable 
+chmod +x run_script.sh
+
+NOW CREATE A DESKTOP FILE:
+#open termnal at desktop and create or open terminal and 
+nano ~/Desktop/Production_data.desktop  #add the followig
+
+[Desktop Entry]
+   Name=Production Data
+   Comment=Run python script
+   Exec=/home/anode/KaynesTB/run_script.sh
+   Icon=/path/to/iconnnn/if/needed/or/have
+   Terminal=true (if you want terminal during running)
+   Type=Application
+   Categories=Utility
+#Save (Ctrl+O) exit (Ctrl+X)
+#Make the desktop file executable
+chmod +x ~/Desktop/Production_data.desktop
+
+Test
